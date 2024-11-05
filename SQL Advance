@@ -1,0 +1,54 @@
+-- Extract data from the website and load it into the staging table
+INSERT INTO staging_website_sales
+SELECT *
+FROM website_sales;
+
+-- Extract data from the mobile app and load it into the staging table
+INSERT INTO staging_mobile_sales
+SELECT *
+FROM mobile_sales;
+
+-- Extract data from social media platforms and load it into the staging table
+INSERT INTO staging_social_media_sales
+SELECT *
+FROM social_media_sales;
+
+-- Transform data into the unified schema
+INSERT INTO sales
+SELECT
+  website_sales.customer_id,
+  website_sales.product_id,
+  website_sales.order_date,
+  website_sales.order_total,
+  mobile_sales.order_total as mobile_order_total,
+  social_media_sales.order_total as social_media_order_total
+FROM
+  staging_website_sales website_sales
+  LEFT JOIN staging_mobile_sales mobile_sales
+    ON website_sales.customer_id = mobile_sales.customer_id
+      AND website_sales.product_id = mobile_sales.product_id
+      AND website_sales.order_date = mobile_sales.order_date
+  LEFT JOIN staging_social_media_sales social_media_sales
+    ON website_sales.customer_id = social_media_sales.customer_id
+      AND website_sales.product_id = social_media_sales.product_id
+      AND website_sales.order_date = social_media_sales.order_date;
+
+-- Calculate total sales by customer
+CREATE TABLE sales_by_customer AS
+SELECT
+  customer_id,
+  SUM(order_total) AS total_sales
+FROM
+  sales
+GROUP BY
+  customer_id;
+
+-- Calculate total sales by product
+CREATE TABLE sales_by_product AS
+SELECT
+  product_id,
+  SUM(order_total) AS total_sales
+FROM
+  sales
+GROUP BY
+  product_id;
